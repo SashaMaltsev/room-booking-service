@@ -113,4 +113,9 @@ CREATE UNIQUE INDEX bookings_one_active_per_slot_idx
     ON bookings (slot_id)
     WHERE status = 'active';
 
+INSERT INTO users (id, email, role)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'dummy-admin@example.com', 'admin'),
+    ('00000000-0000-0000-0000-000000000002', 'dummy-user@example.com', 'user');
+
 COMMIT;

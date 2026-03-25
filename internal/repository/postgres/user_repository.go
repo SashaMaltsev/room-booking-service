@@ -22,10 +22,11 @@ func (r *UserRepository) Create(ctx context.Context, user userdomain.User) (user
 	user.Normalize()
 
 	row := r.db.QueryRowContext(ctx, `
-		INSERT INTO users (email, password_hash, role)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (id, email, password_hash, role)
+		VALUES (COALESCE(NULLIF($1, '')::uuid, gen_random_uuid()), $2, $3, $4)
 		RETURNING id, email, password_hash, role, created_at
 	`,
+		user.ID,
 		user.Email,
 		nullIfEmpty(user.PasswordHash),
 		user.Role.String(),
