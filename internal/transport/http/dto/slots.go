@@ -17,6 +17,10 @@ type ListSlotsResponse struct {
 	Slots []SlotResponse `json:"slots"`
 }
 
+type SlotEnvelope struct {
+	Slot SlotResponse `json:"slot"`
+}
+
 func NewSlotResponse(entity slotdomain.Slot) SlotResponse {
 	return SlotResponse{
 		ID:     entity.ID,

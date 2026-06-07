@@ -20,6 +20,6 @@ type LoginInput struct {
 type Service interface {
 	Register(ctx context.Context, input RegisterInput) (User, error)
 	Login(ctx context.Context, input LoginInput) (string, error)
-	DummyLogin(ctx context.Context, role common.Role) (string, error)
+	DummyLogin(ctx context.Context, role common.Role, demoUser string) (string, error)
 	GetByID(ctx context.Context, id string) (User, error)
 }

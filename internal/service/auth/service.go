@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	jwtauth "github.com/SashaMaltsev/room-booking-service/internal/auth"
@@ -15,8 +16,10 @@ import (
 const (
 	dummyAdminID    = "00000000-0000-0000-0000-000000000001"
 	dummyAdminEmail = "dummy-admin@example.com"
-	dummyUserID     = "00000000-0000-0000-0000-000000000002"
-	dummyUserEmail  = "dummy-user@example.com"
+	dummyUser1ID    = "00000000-0000-0000-0000-000000000002"
+	dummyUser1Email = "dummy-user@example.com"
+	dummyUser2ID    = "00000000-0000-0000-0000-000000000003"
+	dummyUser2Email = "dummy-user-2@example.com"
 )
 
 var _ userdomain.Service = (*Service)(nil)
@@ -61,8 +64,8 @@ func (s *Service) Login(ctx context.Context, input userdomain.LoginInput) (strin
 	return s.tokens.Issue(entity.ID, entity.Role)
 }
 
-func (s *Service) DummyLogin(ctx context.Context, role commondomain.Role) (string, error) {
-	id, email, err := dummyIdentity(role)
+func (s *Service) DummyLogin(ctx context.Context, role commondomain.Role, demoUser string) (string, error) {
+	id, email, err := dummyIdentity(role, demoUser)
 	if err != nil {
 		return "", err
 	}
@@ -94,15 +97,26 @@ func (s *Service) GetByID(ctx context.Context, id string) (userdomain.User, erro
 	return s.users.GetByID(ctx, id)
 }
 
-func dummyIdentity(role commondomain.Role) (id string, email string, err error) {
+func dummyIdentity(role commondomain.Role, demoUser string) (id string, email string, err error) {
 	switch role {
 	case commondomain.RoleAdmin:
 		return dummyAdminID, dummyAdminEmail, nil
 	case commondomain.RoleUser:
-		return dummyUserID, dummyUserEmail, nil
+		switch normalizedDemoUser(demoUser) {
+		case "", "1", "user1":
+			return dummyUser1ID, dummyUser1Email, nil
+		case "2", "user2":
+			return dummyUser2ID, dummyUser2Email, nil
+		default:
+			return "", "", fmt.Errorf("%w: %q", commondomain.ErrInvalidRole, demoUser)
+		}
 	default:
 		return "", "", commondomain.ErrInvalidRole
 	}
+}
+
+func normalizedDemoUser(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func hashPassword(password string) string {

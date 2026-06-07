@@ -45,3 +45,26 @@ func (a *API) handleListSlots(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, response)
 }
+
+func (a *API) handleGetSlot(w http.ResponseWriter, r *http.Request) {
+	if a.slots == nil {
+		writeDomainError(w, nil)
+		return
+	}
+
+	slotID := r.PathValue("slotId")
+	if slotID == "" {
+		writeInvalidRequest(w, "slotId is required")
+		return
+	}
+
+	slot, err := a.slots.GetByID(r.Context(), slotID)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dto.SlotEnvelope{
+		Slot: dto.NewSlotResponse(slot),
+	})
+}

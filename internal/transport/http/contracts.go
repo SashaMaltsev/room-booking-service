@@ -11,7 +11,7 @@ import (
 )
 
 type AuthService interface {
-	DummyLogin(ctx context.Context, role commondomain.Role) (string, error)
+	DummyLogin(ctx context.Context, role commondomain.Role, demoUser string) (string, error)
 }
 
 type TokenVerifier interface {

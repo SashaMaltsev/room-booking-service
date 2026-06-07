@@ -17,12 +17,12 @@ import (
 )
 
 type authServiceStub struct {
-	dummyLoginFn func(ctx context.Context, role commondomain.Role) (string, error)
+	dummyLoginFn func(ctx context.Context, role commondomain.Role, demoUser string) (string, error)
 }
 
-func (s authServiceStub) DummyLogin(ctx context.Context, role commondomain.Role) (string, error) {
+func (s authServiceStub) DummyLogin(ctx context.Context, role commondomain.Role, demoUser string) (string, error) {
 	if s.dummyLoginFn != nil {
-		return s.dummyLoginFn(ctx, role)
+		return s.dummyLoginFn(ctx, role, demoUser)
 	}
 
 	return "token", nil
@@ -163,9 +163,12 @@ func (s bookingServiceStub) ListUpcomingByUser(ctx context.Context, userID strin
 func TestDummyLoginReturnsToken(t *testing.T) {
 	handler := NewHandler(Dependencies{
 		Auth: authServiceStub{
-			dummyLoginFn: func(_ context.Context, role commondomain.Role) (string, error) {
+			dummyLoginFn: func(_ context.Context, role commondomain.Role, demoUser string) (string, error) {
 				if role != commondomain.RoleAdmin {
 					t.Fatalf("expected admin role, got %q", role)
+				}
+				if demoUser != "user2" {
+					t.Fatalf("expected demo user to be forwarded, got %q", demoUser)
 				}
 
 				return "signed-token", nil
@@ -173,7 +176,7 @@ func TestDummyLoginReturnsToken(t *testing.T) {
 		},
 	})
 
-	request := httptest.NewRequest(http.MethodPost, "/dummyLogin", strings.NewReader(`{"role":"admin"}`))
+	request := httptest.NewRequest(http.MethodPost, "/dummyLogin", strings.NewReader(`{"role":"admin","user":"user2"}`))
 	recorder := httptest.NewRecorder()
 
 	handler.ServeHTTP(recorder, request)
@@ -260,6 +263,55 @@ func TestListSlotsRequiresDateQuery(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", recorder.Code)
+	}
+}
+
+func TestGetSlotReturnsSlot(t *testing.T) {
+	start := time.Date(2026, 6, 8, 9, 0, 0, 0, time.UTC)
+	handler := NewHandler(Dependencies{
+		Slots: slotServiceStub{
+			getByIDFn: func(_ context.Context, id string) (slotdomain.Slot, error) {
+				if id != "slot-1" {
+					t.Fatalf("expected slot id from path, got %q", id)
+				}
+
+				return slotdomain.Slot{
+					ID:     id,
+					RoomID: "room-1",
+					Start:  start,
+					End:    start.Add(30 * time.Minute),
+				}, nil
+			},
+		},
+		TokenVerifier: tokenVerifierStub{
+			parseFn: func(token string) (Principal, error) {
+				return Principal{UserID: "user-1", Role: commondomain.RoleUser}, nil
+			},
+		},
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/slots/slot-1", nil)
+	request.Header.Set("Authorization", "Bearer token")
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+
+	var response struct {
+		Slot struct {
+			ID     string `json:"id"`
+			RoomID string `json:"roomId"`
+		} `json:"slot"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected valid json response, got %v", err)
+	}
+
+	if response.Slot.ID != "slot-1" || response.Slot.RoomID != "room-1" {
+		t.Fatalf("expected slot envelope, got %+v", response)
 	}
 }
 

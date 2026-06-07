@@ -30,6 +30,14 @@ components:
         type: string
         format: uuid
       description: Идентификатор переговорки
+    SlotIdPath:
+      name: slotId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Идентификатор слота
     BookingIdPath:
       name: bookingId
       in: path
@@ -309,8 +317,9 @@ paths:
       summary: Получить JWT по роли. Доступен без авторизации.
       description: >
         Выдаёт JWT для указанной роли (admin / user).
-        Для каждой роли возвращается **фиксированный UUID** пользователя:
-        один и тот же UUID для всех запросов с ролью admin и один и тот же UUID для роли user.
+        Для роли admin возвращается фиксированный администратор.
+        Для роли user можно выбрать демо-пользователя через поле `user`: `user1` или `user2`.
+        Если поле `user` не передано, используется `user1`.
         Это обеспечивает стабильность при тестировании сценариев, требующих проверки владельца брони.
         JWT должен содержать как минимум `user_id` (UUID) и `role`.
         Принимает только допустимые значения роли: `admin` или `user`; иные значения — 400.
@@ -325,6 +334,11 @@ paths:
                 role:
                   type: string
                   enum: [admin, user]
+                user:
+                  type: string
+                  enum: [user1, user2]
+                  default: user1
+                  description: Демо-пользователь для роли user. Для роли admin игнорируется.
       responses:
         '200':
           description: JWT
@@ -541,6 +555,39 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Переговорка не найдена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalErrorResponse' }
+
+  /slots/{slotId}:
+    get:
+      tags: [Slots]
+      summary: Получить слот по ID (admin и user)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SlotIdPath'
+      responses:
+        '200':
+          description: Данные слота
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slot:
+                    $ref: '#/components/schemas/Slot'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Слот не найден
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
