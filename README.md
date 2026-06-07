@@ -28,7 +28,6 @@
 - Go 1.22
 - PostgreSQL 16
 - стандартный `net/http`
-- JWT
 - Docker / Docker Compose
 
 ## Архитектура
